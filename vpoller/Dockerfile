@@ -28,6 +28,16 @@ ADD vpoller_module.conf /usr/local/etc/zabbix_proxy.conf.d/
 ADD vpoller.so builds/vpoller.so 
 RUN chmod 0766 /*.sh
 
+ARG YUM_FLAGS_COMMON="-y"
+ARG YUM_FLAGS_PERSISTENT="${YUM_FLAGS_COMMON}"
+
+RUN set -eux && \
+    yum ${YUM_FLAGS_COMMON} makecache && \
+    yum ${YUM_FLAGS_PERSISTENT} install \
+            python3-pip && \
+    yum ${YUM_FLAGS_PERSISTENT} clean all && \
+    pip3 install py-zabbix
+
 ENTRYPOINT ["/run_vpoller_component.sh"]
 CMD ["aio"]
 
