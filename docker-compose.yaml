@@ -303,7 +303,7 @@ services:
   vfzsync:
     # ports:
     #   - "5000:5000"
-    image: djettah/vfzsync:test
+    image: djettah/vfzsync:0.4.6
     # build: .
     restart: always
     volumes:
