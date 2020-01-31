@@ -266,30 +266,30 @@ services:
   #   networks:
   #     zbx_net_frontend:
 
-  grafana-latest:
-    image: grafana/grafana:latest-ubuntu
-    restart: always
-    # ports:
-    #   - "3000:3000"
-    links:
-      - zabbix-web-apache-pgsql:zabbix-web
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      #    - /etc/timezone:/etc/timezone:ro
-      - ./zbx_env/var/lib/grafana-latest:/var/lib/grafana:rw
-    user: root
-    env_file:
-      - .env_grafana-latest
-    secrets:
-      - GRAFANA_PASSWORD
-    healthcheck:
-      test: ["CMD", "curl", "-kf", "http://localhost:3000"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    networks:
-      zbx_net_frontend:
+  # grafana-latest:
+  #   image: grafana/grafana:latest-ubuntu
+  #   restart: always
+  #   # ports:
+  #   #   - "3000:3000"
+  #   links:
+  #     - zabbix-web-apache-pgsql:zabbix-web
+  #   volumes:
+  #     - /etc/localtime:/etc/localtime:ro
+  #     #    - /etc/timezone:/etc/timezone:ro
+  #     - ./zbx_env/var/lib/grafana-latest:/var/lib/grafana:rw
+  #   user: root
+  #   env_file:
+  #     - .env_grafana-latest
+  #   secrets:
+  #     - GRAFANA_PASSWORD
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-kf", "http://localhost:3000"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
+  #     start_period: 30s
+  #   networks:
+  #     zbx_net_frontend:
 
 
   # grafana-reporter:
@@ -303,7 +303,7 @@ services:
   vfzsync:
     # ports:
     #   - "5000:5000"
-    image: djettah/vfzsync:0.4.6
+    image: djettah/vfzsync:0.4.7
     # build: .
     restart: always
     volumes:
@@ -338,7 +338,7 @@ services:
       - "443:443"
     links:
       - grafana:grafana
-      - grafana-latest:grafana-latest
+      # - grafana-latest:grafana-latest
       - vfzsync:vfzsync
       - zabbix-web-apache-pgsql:zabbix-web
     healthcheck:
