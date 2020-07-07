@@ -1,14 +1,10 @@
 version: "3.5"
 services:
   zabbix-server:
-    # image: zabbix/zabbix-server-pgsql:centos-4.4-latest
-    build: ./zbx
+    image: zabbix/zabbix-server-pgsql:centos-5.0-latest
+    # build: ./build/zabbix-server-pgsql-pyzabbix
     restart: always
-    ports:
-      - "10051:10051"
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
       - ./zbx_env/usr/lib/zabbix/alertscripts:/usr/lib/zabbix/alertscripts:ro
       - ./zbx_env/usr/lib/zabbix/externalscripts:/usr/lib/zabbix/externalscripts:ro
       - ./zbx_env/var/lib/zabbix/modules:/var/lib/zabbix/modules:ro
@@ -18,31 +14,19 @@ services:
       - ./zbx_env/var/lib/zabbix/snmptraps:/var/lib/zabbix/snmptraps:ro
     links:
       - postgres-server:postgres-server
-    #   - zabbix-java-gateway:zabbix-java-gateway
     ulimits:
       nproc: 65535
       nofile:
         soft: 20000
         hard: 40000
-    deploy:
-      resources:
-        limits:
-          cpus: "0.70"
-          memory: 1G
-        reservations:
-          cpus: "0.5"
-          memory: 512M
     env_file:
       - .env_db_pgsql
       - .env_srv
     secrets:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
-    user: root
     depends_on:
       - postgres-server
-    #   - zabbix-java-gateway
-    #   - zabbix-snmptraps
     networks:
       zbx_net_backend:
         aliases:
@@ -51,15 +35,7 @@ services:
           - zabbix-server-centos-pgsql
           - zabbix-server-pgsql-centos
       zbx_net_frontend:
-    #  devices:
-    #   - "/dev/ttyUSB0:/dev/ttyUSB0"
     stop_grace_period: 30s
-    # healthcheck:
-    #   test: ["CMD", "service", "zabbix-server", "status"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   retries: 3
-    #   start_period: 30s
     sysctls:
       - net.ipv4.ip_local_port_range=1024 65000
       - net.ipv4.conf.all.accept_redirects=0
@@ -73,61 +49,36 @@ services:
       com.zabbix.os: "centos"
 
   zabbix-proxy-sqlite3-vpoller:
-    #  image: zabbix/zabbix-proxy-sqlite3:centos-4.4-latest
-    # image: djettah/zabbix-proxy-sqlite3-vpoller:centos-4.4-latest
+    #  image: zabbix/zabbix-proxy-sqlite3:centos-5.0-latest
+    # image: djettah/zabbix-proxy-sqlite3-vpoller:centos-5.0-latest
     restart: always
-    build: ./vpoller
-    ports:
-      # - "10061:10051"
-      - "8080:10123" #dev-only
+    build: ./build/zabbix-proxy-sqlite3-vpoller
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
       - ./zbx_env/usr/lib/zabbix/externalscripts:/usr/lib/zabbix/externalscripts:ro
       - ./zbx_env/var/lib/zabbix/modules:/var/lib/zabbix/modules:ro
       - ./zbx_env/var/lib/zabbix/enc:/var/lib/zabbix/enc:ro
       - ./zbx_env/var/lib/zabbix/ssh_keys:/var/lib/zabbix/ssh_keys:ro
       - ./zbx_env/var/lib/zabbix/mibs:/var/lib/zabbix/mibs:ro
       - ./zbx_env/var/lib/zabbix/snmptraps:/var/lib/zabbix/snmptraps:ro
-      - ./zbx_env/var/lib/vconnector/:/var/lib/vconnector/:rw
-    # - ./zbx_env/etc/vpoller/:/etc/vpoller:ro
     links:
       - zabbix-server:zabbix-server
-    #   - zabbix-java-gateway:zabbix-java-gateway
     ulimits:
       nproc: 65535
       nofile:
         soft: 20000
         hard: 40000
-    deploy:
-      resources:
-        limits:
-          cpus: "0.70"
-          memory: 512M
-        reservations:
-          cpus: "0.3"
-          memory: 256M
     env_file:
       - .env_prx
       - .env_prx_sqlite3
-    user: root
-    #  depends_on:
-    #   - zabbix-java-gateway
-    #   - zabbix-snmptraps
     networks:
       zbx_net_backend:
         aliases:
+          - zabbix-proxy
           - zabbix-proxy-sqlite3
           - zabbix-proxy-centos-sqlite3
           - zabbix-proxy-sqlite3-centos
       zbx_net_frontend:
     stop_grace_period: 30s
-    # healthcheck:
-    #   test: ["CMD", "service", "zabbix-proxy", "status"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   retries: 3
-    #   start_period: 30s
     labels:
       com.zabbix.description: "Zabbix proxy with SQLite3 database support"
       com.zabbix.company: "Zabbix LLC"
@@ -135,39 +86,45 @@ services:
       com.zabbix.dbtype: "sqlite3"
       com.zabbix.os: "centos"
 
-  zabbix-web-apache-pgsql:
-    image: zabbix/zabbix-web-apache-pgsql:centos-4.4-latest
+  vpoller-proxy:
+    # image: djettah/zabbix-proxy-sqlite3-vpoller:centos-5.0-latest
     restart: always
-    # ports:
-      # - "80:80"
-      # - "443:443"
+    build: ./build/vpoller-proxy
+    links:
+      - zabbix-proxy-sqlite3-vpoller
+    env_file:
+      - .env_vpoller_prx
+      - .env_vfzsync
+    healthcheck:
+      test: ["CMD", "/healthcheck.sh"]
+      interval: 300s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+    networks:
+      zbx_net_backend:
+      zbx_net_frontend:
+    stop_grace_period: 10s
+
+  zabbix-web-apache-pgsql:
+    image: zabbix/zabbix-web-apache-pgsql:centos-5.0-latest
+    restart: always
     links:
       - postgres-server:postgres-server
       - zabbix-server:zabbix-server
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
       - ./zbx_env/etc/ssl/apache2:/etc/ssl/apache2:ro
-    deploy:
-      resources:
-        limits:
-          cpus: "0.70"
-          memory: 512M
-        reservations:
-          cpus: "0.5"
-          memory: 256M
     env_file:
       - .env_db_pgsql
       - .env_web
     secrets:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
-    user: root
     depends_on:
       - postgres-server
       - zabbix-server
     healthcheck:
-      test: ["CMD", "curl", "-kf", "https://localhost"]
+      test: ["CMD", "curl", "-kf", "http://localhost:8080"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -191,20 +148,52 @@ services:
       com.zabbix.dbtype: "pgsql"
       com.zabbix.os: "centos"
 
+  # zabbix-agent:
+  #   image: zabbix/zabbix-agent:centos-5.0-latest
+  #   ports:
+  #     - "10050:10050"
+  #   volumes:
+  #     - ./zbx_env/etc/zabbix/zabbix_agentd.d:/etc/zabbix/zabbix_agentd.d:ro
+  #     - ./zbx_env/var/lib/zabbix/modules:/var/lib/zabbix/modules:ro
+  #     - ./zbx_env/var/lib/zabbix/enc:/var/lib/zabbix/enc:ro
+  #     - ./zbx_env/var/lib/zabbix/ssh_keys:/var/lib/zabbix/ssh_keys:ro
+  #   links:
+  #     - zabbix-server:zabbix-server
+  #   env_file:
+  #     - .env_agent
+  #   user: root
+  #   privileged: true
+  #   pid: "host"
+  #   networks:
+  #     zbx_net_backend:
+  #       aliases:
+  #         - zabbix-agent
+  #         - zabbix-agent-passive
+  #         - zabbix-agent-centos
+  #   stop_grace_period: 5s
+  #   labels:
+  #     com.zabbix.description: "Zabbix agent"
+  #     com.zabbix.company: "Zabbix LLC"
+  #     com.zabbix.component: "zabbix-agentd"
+  #     com.zabbix.os: "centos"
+
   postgres-server:
-    image: postgres:latest
+    image: postgres:12
     restart: always
     volumes:
-      - ./zbx_env/var/lib/postgresql/data:/var/lib/postgresql/data:rw
+      - ./postgres_env/data:/var/lib/postgresql/data:rw
     env_file:
       - .env_db_pgsql
     secrets:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
-    user: root
     stop_grace_period: 1m
+    command:
+       - "postgres"
+       - "-c"
+       - "shared_buffers=3GB"
     healthcheck:
-      test: ["CMD", "pg_isready"]
+      test: ["CMD-SHELL", "pg_isready -U `cat /run/secrets/POSTGRES_USER` -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -217,19 +206,14 @@ services:
           - pgsql-database
 
   grafana:
-    image: grafana/grafana:6.2.5
+    image: grafana/grafana:7.0.3-ubuntu
     restart: always
-    # ports:
-    #   - "3000:3000"
     links:
       - zabbix-web-apache-pgsql:zabbix-web
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      #    - /etc/timezone:/etc/timezone:ro
-      - ./zbx_env/var/lib/grafana:/var/lib/grafana:rw
-    user: root
+      - ./grafana_env:/var/lib/grafana:rw
     env_file:
-      - .env_grafana
+      - .env_grafana_prod
     secrets:
       - GRAFANA_PASSWORD
     healthcheck:
@@ -240,79 +224,17 @@ services:
       start_period: 30s
     networks:
       zbx_net_frontend:
-
-  # grafana-test:
-  #   image: grafana/grafana:6.2.5
-  #   restart: always
-  #   # ports:
-  #   #   - "3000:3000"
-  #   links:
-  #     - zabbix-web-apache-pgsql:zabbix-web
-  #   volumes:
-  #     - /etc/localtime:/etc/localtime:ro
-  #     #    - /etc/timezone:/etc/timezone:ro
-  #     - ./zbx_env/var/lib/grafana:/var/lib/grafana:rw
-  #   user: root
-  #   env_file:
-  #     - .env_grafana
-  #   secrets:
-  #     - GRAFANA_PASSWORD
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-kf", "http://localhost:3000"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 3
-  #     start_period: 30s
-  #   networks:
-  #     zbx_net_frontend:
-
-  # grafana-latest:
-  #   image: grafana/grafana:latest-ubuntu
-  #   restart: always
-  #   # ports:
-  #   #   - "3000:3000"
-  #   links:
-  #     - zabbix-web-apache-pgsql:zabbix-web
-  #   volumes:
-  #     - /etc/localtime:/etc/localtime:ro
-  #     #    - /etc/timezone:/etc/timezone:ro
-  #     - ./zbx_env/var/lib/grafana-latest:/var/lib/grafana:rw
-  #   user: root
-  #   env_file:
-  #     - .env_grafana-latest
-  #   secrets:
-  #     - GRAFANA_PASSWORD
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-kf", "http://localhost:3000"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 3
-  #     start_period: 30s
-  #   networks:
-  #     zbx_net_frontend:
-
-
-  # grafana-reporter:
-  #   image: izakmarais/grafana-reporter
-  #   links:
-  #     - grafana:grafana
-  #   networks:
-  #     zbx_net_frontend:
-
+      zbx_net_backend:
 
   vfzsync:
-    # ports:
-    #   - "5000:5000"
-    image: djettah/vfzsync:0.4.7
+    image: djettah/vfzsync:test
     # build: .
     restart: always
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-    #    - /etc/timezone:/etc/timezone:ro 
     links:
       - zabbix-server:zabbix-server
       - zabbix-web-apache-pgsql:zabbix-web
       - zabbix-proxy-sqlite3-vpoller:zabbix-proxy
+      - vpoller-proxy:vpoller-proxy
     env_file:
       - .env_vfzsync
     healthcheck:
@@ -321,14 +243,13 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
-
     networks:
       zbx_net_frontend:
       zbx_net_backend:
 
   nginx:
     image: nginx:1.17
-    # build: ./nginx_env
+    # build: ./build/nginx_env
     restart: always
     volumes:
       - ./nginx_env/nginx.conf:/etc/nginx/conf.d/default.conf:ro
@@ -338,21 +259,28 @@ services:
       - "443:443"
     links:
       - grafana:grafana
-      # - grafana-latest:grafana-latest
       - vfzsync:vfzsync
       - zabbix-web-apache-pgsql:zabbix-web
+      - zabbix-proxy-sqlite3-vpoller:zabbx-proxy
     healthcheck:
       test: ["CMD", "service", "nginx", "status"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 30s
-
-
     networks:
       zbx_net_frontend:
       zbx_net_backend:
 
+
+  # autoheal:
+  #   image: willfarrell/autoheal
+  #   restart: always
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   environment:
+  #     AUTOHEAL_CONTAINER_LABEL: all
+    
 
 networks:
   zbx_net_frontend:
@@ -372,6 +300,7 @@ networks:
       driver: default
       config:
         - subnet: 172.16.239.0/24
+
 
 secrets:
   POSTGRES_USER:

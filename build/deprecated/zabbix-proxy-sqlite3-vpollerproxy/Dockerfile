@@ -1,4 +1,4 @@
-FROM zabbix/zabbix-proxy-sqlite3:centos-4.4-latest
+FROM zabbix/zabbix-proxy-sqlite3:centos-5.0-latest
 
 ARG YUM_FLAGS_COMMON="-y"
 ARG YUM_FLAGS_PERSISTENT="${YUM_FLAGS_COMMON}"

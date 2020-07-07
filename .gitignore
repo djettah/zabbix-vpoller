@@ -35,8 +35,14 @@ dist/
 # locally required config files
 public/css/*.min.css
 
-zbx_env/
+zbx_env/var/lib/grafana
+zbx_env/var/lib/postgresql
+zbx_env/var/lib/vconnector
+*_env
 *test*
+*_prod*
+*_dev*
+*_test*
 .circleci
 .codecov.yml
 .codespell_ignore
@@ -44,3 +50,6 @@ zbx_env/
 .jscs.json
 .jshintrc
 .gitattributes
+*.bak
+*_beta
+backup
