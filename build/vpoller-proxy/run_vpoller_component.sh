@@ -102,8 +102,10 @@ else
     /import-hostsfile.sh
 fi
 
-vconnector-cli --debug -H ${VPOLLER_VC_HOST} -U ${VPOLLER_VC_USERNAME} -P ${VPOLLER_VC_PASSWORD} add
-vconnector-cli --debug -H ${VPOLLER_VC_HOST} enable
+vconnector-cli --debug -H ${VPOLLER_VC_HOST_01} -U ${VPOLLER_VC_USERNAME_01} -P ${VPOLLER_VC_PASSWORD_01} add
+vconnector-cli --debug -H ${VPOLLER_VC_HOST_01} enable
+vconnector-cli --debug -H ${VPOLLER_VC_HOST_02} -U ${VPOLLER_VC_USERNAME_02} -P ${VPOLLER_VC_PASSWORD_02} add
+vconnector-cli --debug -H ${VPOLLER_VC_HOST_02} enable
 vconnector-cli --debug get
 
 echo "########################################################"

@@ -4,6 +4,8 @@ services:
     image: zabbix/zabbix-server-pgsql:centos-5.0-latest
     # build: ./build/zabbix-server-pgsql-pyzabbix
     restart: always
+    ports:
+      - "10051:10051"
     volumes:
       - ./zbx_env/usr/lib/zabbix/alertscripts:/usr/lib/zabbix/alertscripts:ro
       - ./zbx_env/usr/lib/zabbix/externalscripts:/usr/lib/zabbix/externalscripts:ro
@@ -60,8 +62,8 @@ services:
       - ./zbx_env/var/lib/zabbix/ssh_keys:/var/lib/zabbix/ssh_keys:ro
       - ./zbx_env/var/lib/zabbix/mibs:/var/lib/zabbix/mibs:ro
       - ./zbx_env/var/lib/zabbix/snmptraps:/var/lib/zabbix/snmptraps:ro
-    links:
-      - zabbix-server:zabbix-server
+    # links:
+    #   - zabbix-server:zabbix-server
     ulimits:
       nproc: 65535
       nofile:
@@ -90,8 +92,8 @@ services:
     # image: djettah/zabbix-proxy-sqlite3-vpoller:centos-5.0-latest
     restart: always
     build: ./build/vpoller-proxy
-    links:
-      - zabbix-proxy-sqlite3-vpoller
+    # links:
+    #   - zabbix-proxy-sqlite3-vpoller
     env_file:
       - .env_vpoller_prx
       - .env_vfzsync
@@ -109,9 +111,9 @@ services:
   zabbix-web-apache-pgsql:
     image: zabbix/zabbix-web-apache-pgsql:centos-5.0-latest
     restart: always
-    links:
-      - postgres-server:postgres-server
-      - zabbix-server:zabbix-server
+    # links:
+    #   - postgres-server:postgres-server
+    #   - zabbix-server:zabbix-server
     volumes:
       - ./zbx_env/etc/ssl/apache2:/etc/ssl/apache2:ro
     env_file:
@@ -120,9 +122,9 @@ services:
     secrets:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
-    depends_on:
-      - postgres-server
-      - zabbix-server
+    # depends_on:
+    #   - postgres-server
+    #   - zabbix-server
     healthcheck:
       test: ["CMD", "curl", "-kf", "http://localhost:8080"]
       interval: 10s
@@ -208,8 +210,8 @@ services:
   grafana:
     image: grafana/grafana:7.0.3-ubuntu
     restart: always
-    links:
-      - zabbix-web-apache-pgsql:zabbix-web
+    # links:
+    #   - zabbix-web-apache-pgsql:zabbix-web
     volumes:
       - ./grafana_env:/var/lib/grafana:rw
     env_file:
@@ -230,11 +232,11 @@ services:
     image: djettah/vfzsync:test
     # build: .
     restart: always
-    links:
-      - zabbix-server:zabbix-server
-      - zabbix-web-apache-pgsql:zabbix-web
-      - zabbix-proxy-sqlite3-vpoller:zabbix-proxy
-      - vpoller-proxy:vpoller-proxy
+    # links:
+    #   - zabbix-server:zabbix-server
+    #   - zabbix-web-apache-pgsql:zabbix-web
+    #   - zabbix-proxy-sqlite3-vpoller:zabbix-proxy
+    #   - vpoller-proxy:vpoller-proxy
     env_file:
       - .env_vfzsync
     healthcheck:
@@ -257,11 +259,11 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    links:
-      - grafana:grafana
-      - vfzsync:vfzsync
-      - zabbix-web-apache-pgsql:zabbix-web
-      - zabbix-proxy-sqlite3-vpoller:zabbx-proxy
+    # links:
+    #   - grafana:grafana
+    #   - vfzsync:vfzsync
+    #   - zabbix-web-apache-pgsql:zabbix-web
+    #   - zabbix-proxy-sqlite3-vpoller:zabbx-proxy
     healthcheck:
       test: ["CMD", "service", "nginx", "status"]
       interval: 10s

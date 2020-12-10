@@ -38,7 +38,7 @@ public/css/*.min.css
 zbx_env/var/lib/grafana
 zbx_env/var/lib/postgresql
 zbx_env/var/lib/vconnector
-*_env
+zbx_env
 *test*
 *_prod*
 *_dev*
